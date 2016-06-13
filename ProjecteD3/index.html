@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="author" content="lorenacapo">
+	<meta name="description" content="Proyecto D3">
+	<title>Proyecto D3 - Lorena Capó</title>
+	<link href='https://fonts.googleapis.com/css?family=Slabo+27px' rel='stylesheet' type='text/css'>
+	<script src="d3/d3.min.js"></script>
+	<style>
+		body{
+			/*width:1060px;*/
+			/*margin:50px auto;*/
+			font-size: 12px;
+			font-family: 'Slabo 27px', serif;
+		}
+		path {  stroke: #fff; }
+		path:hover {  opacity:0.9; }
+		rect:hover {  fill:blue; }
+		.axis {  font: 10px sans-serif; }
+		.legend tr{    border-bottom:1px solid grey; }
+		.legend tr:first-child{    border-top:1px solid grey; }
+
+		.axis path,
+		.axis line {
+			fill: none;
+			stroke: #000;
+			shape-rendering: crispEdges;
+		}
+
+		.x.axis path {  display: none; }
+		.legend{
+			margin-bottom:76px;
+			display:inline-block;
+			border-collapse: collapse;
+			border-spacing: 0px;
+			column-count: 3;
+			order: 2;
+		}
+		.legend td{
+			padding:4px 5px;
+			vertical-align:bottom;
+		}
+		.legendFreq, .legendPerc{
+			align:right;
+			width:50px;
+		}
+		.graficoBarras{
+			order: 1;
+		}
+		.graficoCircular{
+			order: 3;
+		}
+		#dashboard{
+			display: flex;
+			flex-wrap: wrap;
+			position: absolute;
+			left: 0;
+
+		}
+
+		#infoSuperior {
+			position: absolute;
+			left: 0;
+			top: 900px;
+		}
+		#infoSuperior th, #infoSuperior td{
+			padding: 0px 10px;
+		}
+
+		#explicacion{
+			width: 260px;
+			position: relative;
+			top: 60px;
+			left: 860px;
+		}
+
+		#explicacion p{
+			font-size: 16px;
+		}
+
+		h1{
+			font-size: 26px;
+		}
+		h2 {
+			font-size: 18px;
+		}
+	</style>
+</head>
+
+<body>
+
+	<h1>Ciclos Formativos de Grado Superior</h1>
+	<h2>Por familias profesionales y sexos</h2>
+
+	<div id='dashboard'>
+	</div>
+	<script>
+		function dashboard(id, fData){
+			var barColor = 'steelblue';
+			function segColor(c){ return {fam001:"#F5A9A9",fam002:"#FE2E2E",fam003:"#8A0808",fam004:"#F5D0A9",fam005:"#FE9A2E",fam006:"#DF7401",fam007:"#F2F5A9",fam008:"#F7FE2E",fam009:"#D7DF01",fam010:"#D0F5A9",fam011:"#9AFE2E",fam012:"#5FB404",fam013:"#A9F5BC",fam014:"#2EFE9A",fam015:"#A9F5E1",fam016:"#01DFA5",fam017:"#81F7F3",fam018:"#00BFFF",fam019:"#013ADF",fam020:"#BE81F7",fam021:"#8904B1",fam022:"#F781F3",fam023:"#DF01D7",fam024:"#8A0886",fam025:"#FE2E9A",fam026:"#FF0040",fam027:"#8A0829"}[c]; }
+
+    // compute total for each state.
+    fData.forEach(function(d){d.total=d.freq.fam001+d.freq.fam002+d.freq.fam003+d.freq.fam004+d.freq.fam005+d.freq.fam006+d.freq.fam007+d.freq.fam008+d.freq.fam009+d.freq.fam010+d.freq.fam011+d.freq.fam012+d.freq.fam013+d.freq.fam014+d.freq.fam015+d.freq.fam016+d.freq.fam017+d.freq.fam018+d.freq.fam019+d.freq.fam020+d.freq.fam021+d.freq.fam022+d.freq.fam023+d.freq.fam024+d.freq.fam025+d.freq.fam026+d.freq.fam027;
+    	d.total.toFixed(2)
+    });
+    
+    // function to handle histogram.
+    function histoGram(fD){
+    	var hG={},    hGDim = {t: 60, r: 0, b: 30, l: 0};
+    	hGDim.w = 800 - hGDim.l - hGDim.r, 
+    	hGDim.h = 500 - hGDim.t - hGDim.b;
+
+        //create svg for histogram.
+        var hGsvg = d3.select(id).append("svg")
+        .attr("width", hGDim.w + hGDim.l + hGDim.r)
+        .attr("class", "graficoBarras")
+        .attr("height", hGDim.h + hGDim.t + hGDim.b).append("g")
+        .attr("transform", "translate(" + hGDim.l + "," + hGDim.t + ")");
+
+        // create function for x-axis mapping.
+        var x = d3.scale.ordinal().rangeRoundBands([0, hGDim.w], 0.1)
+        .domain(fD.map(function(d) { return d[0]; }));
+
+        // Add x-axis to the histogram svg.
+        hGsvg.append("g").attr("class", "x axis")
+        .attr("transform", "translate(0," + hGDim.h + ")")
+        .call(d3.svg.axis().scale(x).orient("bottom"));
+
+        // Create function for y-axis map.
+        var y = d3.scale.linear().range([hGDim.h, 0])
+        .domain([0, d3.max(fD, function(d) { return d[1]; })]);
+
+        // Create bars for histogram to contain rectangles and freq labels.
+        var bars = hGsvg.selectAll(".bar").data(fD).enter()
+        .append("g").attr("class", "bar");
+        
+        //create the rectangles.
+        bars.append("rect")
+        .attr("x", function(d) { return x(d[0]); })
+        .attr("y", function(d) { return y(d[1]).toFixed(2); })
+        .attr("width", x.rangeBand())
+        .attr("height", function(d) { return hGDim.h - y(d[1]).toFixed(2); })
+        .attr('fill',barColor)
+            .on("mouseover",mouseover)// mouseover is defined below.
+            .on("mouseout",mouseout);// mouseout is defined below.
+
+            
+        //Create the frequency labels above the rectangles.
+        bars.append("text").text(function(d){ return d3.format(",")(d[1])})
+        .attr("x", function(d) { return x(d[0])+x.rangeBand()/2; })
+        .attr("y", function(d) { return y(d[1]).toFixed(2)-5; })
+        .attr("text-anchor", "middle");
+        
+        function mouseover(d){  // utility function to be called on mouseover.
+            // filter for selected state.
+            var st = fData.filter(function(s){ return s.State == d[0];})[0],
+            nD = d3.keys(st.freq).map(function(s){ return {type:s, freq:st.freq[s]};});
+
+            // call update functions of pie-chart and legend.    
+            pC.update(nD);
+            leg.update(nD);
+        }
+        
+        function mouseout(d){    // utility function to be called on mouseout.
+            // reset the pie-chart and legend.    
+            pC.update(tF);
+            leg.update(tF);
+        }
+        
+        // create function to update the bars. This will be used by pie-chart.
+        hG.update = function(nD, color){
+            // update the domain of the y-axis map to reflect change in frequencies.
+            y.domain([0, d3.max(nD, function(d) { return d[1]; })]);
+            
+            // Attach the new data to the bars.
+            var bars = hGsvg.selectAll(".bar").data(nD);
+            
+            // transition the height and color of rectangles.
+            bars.select("rect").transition().duration(500)
+            .attr("y", function(d) {return y(d[1]).toFixed(2); })
+            .attr("height", function(d) { return hGDim.h - y(d[1]).toFixed(2); })
+            .attr("fill", color);
+
+            // transition the frequency labels location and change value.
+            bars.select("text").transition().duration(500)
+            .text(function(d){ return d3.format(",")(d[1])})
+            .attr("y", function(d) {return y(d[1]).toFixed(2)-5; });            
+        }        
+        return hG;
+    }
+    
+    // function to handle pieChart.
+    function pieChart(pD){
+    	var pC ={},    pieDim ={w:250, h: 250};
+    	pieDim.r = Math.min(pieDim.w, pieDim.h) / 2;
+
+        // create svg for pie chart.
+        var piesvg = d3.select(id).append("svg")
+        .attr("class", "graficoCircular")
+        .attr("width", pieDim.w).attr("height", pieDim.h).append("g")
+        .attr("transform", "translate("+pieDim.w/2+","+pieDim.h/2+")");
+        
+        // create function to draw the arcs of the pie slices.
+        var arc = d3.svg.arc().outerRadius(pieDim.r - 10).innerRadius(0);
+
+        // create a function to compute the pie slice angles.
+        var pie = d3.layout.pie().sort(null).value(function(d) { return d.freq; });
+
+        // Draw the pie slices.
+        piesvg.selectAll("path").data(pie(pD)).enter().append("path").attr("d", arc)
+        .each(function(d) { this._current = d; })
+        .style("fill", function(d) { return segColor(d.data.type); })
+        .on("mouseover",mouseover).on("mouseout",mouseout);
+
+        // create function to update pie-chart. This will be used by histogram.
+        pC.update = function(nD){
+        	piesvg.selectAll("path").data(pie(nD)).transition().duration(500)
+        	.attrTween("d", arcTween);
+        }        
+        // Utility function to be called on mouseover a pie slice.
+        function mouseover(d){
+            // call the update function of histogram with new data.
+            hG.update(fData.map(function(v){ 
+            	return [v.State,v.freq[d.data.type]];}),segColor(d.data.type));
+        }
+        //Utility function to be called on mouseout a pie slice.
+        function mouseout(d){
+            // call the update function of histogram with all data.
+            hG.update(fData.map(function(v){
+            	return [v.State,v.total];}), barColor);
+        }
+        // Animating the pie-slice requiring a custom function which specifies
+        // how the intermediate paths should be drawn.
+        function arcTween(a) {
+        	var i = d3.interpolate(this._current, a);
+        	this._current = i(0);
+        	return function(t) { return arc(i(t));    };
+        }    
+        return pC;
+    }
+    
+    // function to handle legend.
+    function legend(lD){
+    	var leg = {};
+
+        // create table for legend.
+        var legend = d3.select(id).append("table").attr('class','legend');
+        
+        // create one row per segment.
+        var tr = legend.append("tbody").selectAll("tr").data(lD).enter().append("tr");
+
+        // create the first column for each segment.
+        tr.append("td").append("svg").attr("width", '16').attr("height", '16').append("rect")
+        .attr("width", '16').attr("height", '16')
+        .attr("fill",function(d){ return segColor(d.type); });
+
+        // create the second column for each segment.
+        tr.append("td").text(function(d){ return d.type;});
+
+        // create the third column for each segment.
+        tr.append("td").attr("class",'legendFreq')
+        .text(function(d){ return d3.format(",")(d.freq);});
+
+        // create the fourth column for each segment.
+        tr.append("td").attr("class",'legendPerc')
+        .text(function(d){ return getLegend(d,lD);});
+
+        // Utility function to be used to update the legend.
+        leg.update = function(nD){
+            // update the data attached to the row elements.
+            var l = legend.select("tbody").selectAll("tr").data(nD);
+
+            // update the frequencies.
+            l.select(".legendFreq").text(function(d){ return d3.format(",")(d.freq);});
+
+            // update the percentage column.
+            l.select(".legendPerc").text(function(d){ return getLegend(d,nD);});        
+        }
+        
+        function getLegend(d,aD){ // Utility function to compute percentage.
+        	return d3.format("%")(d.freq/d3.sum(aD.map(function(v){ return v.freq; })));
+        }
+
+        return leg;
+    }
+    
+    // calculate total frequency by segment for all state.
+    var tF = ['fam001','fam002','fam003','fam004','fam005','fam006','fam007','fam008','fam009','fam010','fam011','fam012','fam013','fam014','fam015','fam016','fam017','fam018','fam019','fam020','fam021','fam022','fam023','fam024','fam025','fam026','fam027'].map(function(d){ 
+    	return {type:d, freq: d3.sum(fData.map(function(t){ return t.freq[d];}))}; 
+    });    
+    
+    // calculate total frequency by state for all segment.
+    var sF = fData.map(function(d){return [d.State,d.total];});
+
+    var hG = histoGram(sF), // create the histogram.
+        pC = pieChart(tF), // create the pie-chart.
+        leg= legend(tF);  // create the legend.
+    }
+</script>
+
+<script>
+	var freqData=[
+	{State:'<18 M',freq:{fam001:5.1,fam002:5,fam003:3.5,fam004:1.7,fam005:4.4,fam006:3.5,fam007:3.2,fam008:3.6,fam009:3.5,fam010:3.3,fam011:5.9,fam012:5.8,fam013:1.6,fam014:0,fam015:3.4,fam016:3,fam017:2.1,fam018:2.2,fam019:4.1,fam020:6.6,fam021:2.7,fam022:4.3,fam023:5.4,fam024:4.2,fam025:0,fam026:3.3,fam027:6}}
+	,{State:'<18 F',freq:{fam001:12,fam002:4.1,fam003:3.5,fam004:5.2,fam005:2,fam006:5.5,fam007:4.7,fam008:4.6,fam009:3.6,fam010:4.9,fam011:4.6,fam012:4.9,fam013:8.5,fam014:3.2,fam015:0,fam016:3.1,fam017:2.6,fam018:1.5,fam019:4.4,fam020:6.1,fam021:8.9,fam022:3.3,fam023:6.2,fam024:3.6,fam025:5.5,fam026:0,fam027:3.2}}
+	,{State:'19 M',freq:{fam001:13.9,fam002:13.5,fam003:8.6,fam004:10,fam005:11.7,fam006:8,fam007:9.1,fam008:10,fam009:8.9,fam010:9.1,fam011:7.6,fam012:13.9,fam013:6,fam014:0,fam015:10,fam016:8.2,fam017:7,fam018:5.7,fam019:9.9,fam020:12.9,fam021:7.4,fam022:12.2,fam023:4.5,fam024:13.4,fam025:15.4,fam026:12.7,fam027:12.8}}
+	,{State:'19 F',freq:{fam001:22.2,fam002:10.3,fam003:9.6,fam004:9.7,fam005:3.9,fam006:12.3,fam007:10.2,fam008:8.8,fam009:9.6,fam010:7.5,fam011:10.9,fam012:11,fam013:15.2,fam014:4.8,fam015:0,fam016:7.5,fam017:4.6,fam018:9.8,fam019:5.7,fam020:10.2,fam021:15.2,fam022:6.8,fam023:15,fam024:5.5,fam025:8.1,fam026:0,fam027:9}}
+	,{State:'20 M',freq:{fam001:17.4,fam002:17.7,fam003:12.5,fam004:8.3,fam005:16.1,fam006:13.1,fam007:13.3,fam008:12.6,fam009:11.6,fam010:13.4,fam011:15.1,fam012:16.6,fam013:12.1,fam014:0,fam015:13.2,fam016:11,fam017:11.7,fam018:7.2,fam019:12.1,fam020:13.3,fam021:10.9,fam022:15.8,fam023:7.2,fam024:18.2,fam025:0,fam026:15.7,fam027:14.4}}
+	,{State:'20 F',freq:{fam001:18.9,fam002:13.5,fam003:12.9,fam004:13.1,fam005:5.9,fam006:13.9,fam007:11.7,fam008:11.8,fam009:10.7,fam010:8.2,fam011:14.4,fam012:15.6,fam013:17.6,fam014:9.6,fam015:0,fam016:9,fam017:7.7,fam018:6.1,fam019:7.6,fam020:11.4,fam021:13.4,fam022:7.2,fam023:17.2,fam024:8.1,fam025:14.6,fam026:0,fam027:11.3}}
+	,{State:'21 M',freq:{fam001:15.7,fam002:15.1,fam003:15.1,fam004:8.3,fam005:14.5,fam006:12,fam007:13.7,fam008:14.3,fam009:13.6,fam010:13.2,fam011:14.7,fam012:15.4,fam013:13.1,fam014:0,fam015:14.3,fam016:12.5,fam017:12.7,fam018:9.1,fam019:12,fam020:11.9,fam021:10.9,fam022:14.8,fam023:9.9,fam024:16.3,fam025:7.7,fam026:11.3,fam027:12.5}}
+	,{State:'21 F',freq:{fam001:12.7,fam002:12.3,fam003:9.4,fam004:15.9,fam005:5.9,fam006:13.3,fam007:12.9,fam008:12.7,fam009:7.1,fam010:7.4,fam011:14,fam012:13.9,fam013:15.2,fam014:10.5,fam015:0,fam016:9.9,fam017:5.1,fam018:10.6,fam019:7,fam020:10.9,fam021:11.4,fam022:9.5,fam023:13.4,fam024:8.3,fam025:14.9,fam026:0,fam027:9.8}}
+	,{State:'22 M',freq:{fam001:11.3,fam002:9.5,fam003:13.4,fam004:6.7,fam005:11.9,fam006:10.3,fam007:11.5,fam008:10.3,fam009:10.6,fam010:11.7,fam011:12.6,fam012:11.9,fam013:8,fam014:0,fam015:11.3,fam016:11.3,fam017:11.3,fam018:9.3,fam019:9.8,fam020:9.2,fam021:9.6,fam022:12,fam023:3.6,fam024:12.2,fam025:0,fam026:8.5,fam027:9.5}}
+	,{State:'22 F',freq:{fam001:9.2,fam002:9.8,fam003:8,fam004:12.7,fam005:9.8,fam006:10.2,fam007:8.4,fam008:7.5,fam009:5.6,fam010:6.5,fam011:11,fam012:10.9,fam013:11.2,fam014:8.4,fam015:0,fam016:8.5,fam017:7.7,fam018:3.8,fam019:7,fam020:9.5,fam021:8.6,fam022:7.9,fam023:9.6,fam024:9.3,fam025:8.1,fam026:0,fam027:7.6}}
+	,{State:'23 M',freq:{fam001:8.1,fam002:7,fam003:8.7,fam004:5,fam005:9,fam006:8.4,fam007:8.5,fam008:9.5,fam009:7.8,fam010:9.6,fam011:8.8,fam012:8.5,fam013:6.8,fam014:0,fam015:8.3,fam016:8.4,fam017:7.4,fam018:5.6,fam019:8.1,fam020:7.2,fam021:9.9,fam022:8.4,fam023:7.2,fam024:8.3,fam025:23.1,fam026:7.3,fam027:7.1}}
+	,{State:'23 F',freq:{fam001:6.3,fam002:7.8,fam003:7,fam004:7.1,fam005:7.8,fam006:8.2,fam007:7.7,fam008:7.4,fam009:8.1,fam010:5.4,fam011:8.1,fam012:7.7,fam013:8.1,fam014:8,fam015:0,fam016:7.2,fam017:5.6,fam018:6.8,fam019:5.1,fam020:7.2,fam021:6.1,fam022:8.8,fam023:6.9,fam024:7,fam025:5.2,fam026:0,fam027:5.1}}
+	,{State:'24 M',freq:{fam001:5.8,fam002:4.7,fam003:7.2,fam004:6.7,fam005:6.7,fam006:6.7,fam007:6.6,fam008:6.8,fam009:6.4,fam010:7,fam011:5,fam012:6.7,fam013:5.7,fam014:0,fam015:6.3,fam016:6.5,fam017:5.5,fam018:5.7,fam019:6.4,fam020:5.9,fam021:7.5,fam022:5.4,fam023:6.3,fam024:5.6,fam025:0,fam026:4.9,fam027:5.5}}
+	,{State:'24 F',freq:{fam001:4.6,fam002:6,fam003:5,fam004:7.4,fam005:2,fam006:5.9,fam007:6.4,fam008:5.8,fam009:5.6,fam010:5.5,fam011:6.4,fam012:5.4,fam013:6.4,fam014:6.3,fam015:0,fam016:7.2,fam017:10.2,fam018:5.3,fam019:5.7,fam020:6.3,fam021:4.7,fam022:5.8,fam023:5.1,fam024:5.3,fam025:5.2,fam026:25,fam027:4.6}}
+	,{State:'25 M',freq:{fam001:4.4,fam002:3.1,fam003:7.2,fam004:3.3,fam005:4.6,fam006:4.8,fam007:5,fam008:4.7,fam009:4.8,fam010:4.9,fam011:5.5,fam012:4.7,fam013:4.7,fam014:0,fam015:4.8,fam016:5.2,fam017:4.2,fam018:3.6,fam019:4.6,fam020:4.5,fam021:5.9,fam022:4.4,fam023:6.3,fam024:3.9,fam025:7.7,fam026:3.8,fam027:4.2}}
+	,{State:'25 F',freq:{fam001:3.3,fam002:4.6,fam003:3.9,fam004:6.4,fam005:11.8,fam006:4.4,fam007:5.4,fam008:4.2,fam009:6.1,fam010:6.2,fam011:4.6,fam012:4.7,fam013:3.8,fam014:3.5,fam015:0,fam016:5.3,fam017:5.1,fam018:2.3,fam019:7,fam020:5.3,fam021:3.4,fam022:6.4,fam023:3.8,fam024:5.3,fam025:4.9,fam026:0,fam027:4.2}}
+	,{State:'26 M',freq:{fam001:3.1,fam002:2.9,fam003:4.7,fam004:3.3,fam005:3.7,fam006:3,fam007:3.6,fam008:3.7,fam009:3.9,fam010:4.4,fam011:3.8,fam012:3.3,fam013:4.9,fam014:0,fam015:4,fam016:4,fam017:4.2,fam018:4.1,fam019:4.2,fam020:3.7,fam021:4,fam022:2.9,fam023:5.4,fam024:3,fam025:7.7,fam026:3.6,fam027:3.2}}
+	,{State:'26 F',freq:{fam001:1.7,fam002:3.8,fam003:3.3,fam004:3.2,fam005:3.9,fam006:2.8,fam007:3.8,fam008:3.3,fam009:5.6,fam010:5.2,fam011:3.5,fam012:3.3,fam013:2.9,fam014:4.5,fam015:0,fam016:4.2,fam017:3.1,fam018:3,fam019:5.1,fam020:4.4,fam021:2.8,fam022:5.3,fam023:2.9,fam024:4.1,fam025:2.9,fam026:25,fam027:3.7}}
+	,{State:'27 M',freq:{fam001:2.4,fam002:2.4,fam003:2.9,fam004:6.7,fam005:2.5,fam006:2.8,fam007:3,fam008:3.8,fam009:3.2,fam010:3.4,fam011:2.5,fam012:2.1,fam013:3,fam014:0,fam015:3.1,fam016:3.6,fam017:1.1,fam018:4.1,fam019:4,fam020:2.6,fam021:3.2,fam022:2.7,fam023:4.5,fam024:2.6,fam025:0,fam026:2.8,fam027:2.7}}
+	,{State:'27 F',freq:{fam001:1.5,fam002:3.1,fam003:2.2,fam004:2.5,fam005:0,fam006:2.7,fam007:2.8,fam008:4.1,fam009:4.6,fam010:4.5,fam011:3,fam012:2.9,fam013:2,fam014:3.2,fam015:0,fam016:3.9,fam017:3.1,fam018:3.8,fam019:8.2,fam020:3.5,fam021:2.3,fam022:3.4,fam023:2.4,fam024:3.6,fam025:5.8,fam026:25,fam027:4}}
+	,{State:'28 M',freq:{fam001:2,fam002:2,fam003:1.9,fam004:6.7,fam005:1.8,fam006:2.5,fam007:2.7,fam008:2.3,fam009:2.8,fam010:2.5,fam011:2.9,fam012:2,fam013:3.3,fam014:0,fam015:2.6,fam016:2.8,fam017:2.6,fam018:3.7,fam019:3.3,fam020:2.2,fam021:1.9,fam022:1.5,fam023:10.8,fam024:1.9,fam025:15.4,fam026:2.3,fam027:2.2}}
+	,{State:'28 F',freq:{fam001:1.2,fam002:2.7,fam003:2.7,fam004:2.2,fam005:2,fam006:2.2,fam007:3,fam008:2.6,fam009:4.6,fam010:2.6,fam011:2.1,fam012:2.1,fam013:1.8,fam014:3.3,fam015:0,fam016:3.7,fam017:4.1,fam018:5.3,fam019:1.9,fam020:3,fam021:2.1,fam022:3.8,fam023:1.7,fam024:3.1,fam025:4.2,fam026:0,fam027:3.2}}
+	,{State:'29 M',freq:{fam001:1.6,fam002:1.7,fam003:2.5,fam004:5,fam005:1.8,fam006:2.3,fam007:2.2,fam008:2.1,fam009:2.3,fam010:2.1,fam011:0,fam012:1.6,fam013:2.3,fam014:0,fam015:2.3,fam016:2.6,fam017:2.3,fam018:3.1,fam019:3.1,fam020:2,fam021:2.2,fam022:1.7,fam023:1.8,fam024:1.7,fam025:15.4,fam026:2.3,fam027:2}}
+	,{State:'29 F',freq:{fam001:1,fam002:2.3,fam003:4.2,fam004:2.3,fam005:2,fam006:1.9,fam007:2,fam008:3.3,fam009:1.5,fam010:3.4,fam011:1.8,fam012:1.9,fam013:1.5,fam014:2.4,fam015:0,fam016:2.9,fam017:3.6,fam018:2.3,fam019:7.6,fam020:3.5,fam021:1.9,fam022:3.1,fam023:1.6,fam024:3.1,fam025:4.5,fam026:0,fam027:2.4}}
+	]; 
+
+	dashboard('#dashboard',freqData);
+</script>
+<script type="text/javascript">
+
+	parseFloatHover(); 
+
+	function parseFloatHover()
+	{
+		var elements = document.getElementsByClassName('bar');
+		for (var i = 0; i < elements.length; ++i){
+			var current_element = elements[i].querySelector('text').innerHTML; 
+			elements[i].querySelector('text').innerHTML = parseFloat(current_element).toFixed(2);
+		}
+		var elements = document.getElementsByClassName('legendFreq');
+		for (var i = 0; i < elements.length; ++i){
+			var current_element = elements[i].innerHTML; 
+			elements[i].innerHTML = parseFloat(current_element).toFixed(2);
+		}
+	}
+
+	document.addEventListener("mousemove", parseFloatHover);
+
+</script>
+
+<table id="infoSuperior">
+	<thead>
+		<tr>
+			<th>CFGSuperior</th>
+			<th>Código</th>
+			<th>CFGSuperior</th>
+			<th>Código</th>
+			<th>CFGSuperior</th>
+			<th>Código</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr>
+			<td>   ACTIVIDADES FÍSICAS Y DEPORTIVAS</td>
+			<td>fam001</td>
+			<td>   FABRICACIÓN MECÁNICA</td>
+			<td>fam010</td>
+			<td>   MARÍTIMO-PESQUERA</td>
+			<td>fam019</td>
+		</tr>
+
+		<tr>
+			<td>   ADMINISTRACIÓN Y GESTIÓN</td>
+			<td>fam002</td>
+			<td>   HOSTELERÍA Y TURISMO</td>
+			<td>fam011</td>
+			<td>   QUÍMICA</td>
+			<td>fam020</td>
+		</tr>
+
+		<tr>
+			<td>   AGRARIA</td>
+			<td>fam003</td>
+			<td>   IMAGEN PERSONAL</td>
+			<td>fam012</td>
+			<td>   SANIDAD</td>
+			<td>fam021</td>
+		</tr>
+
+		<tr>
+			<td>   ARTES GRÁFICAS</td>
+			<td>fam004</td>
+			<td>   IMAGEN Y SONIDO</td>
+			<td>fam013</td>
+			<td>   SEGURIDAD Y MEDIO AMBIENTE</td>
+			<td>fam022</td>
+		</tr>
+
+		<tr>
+			<td>   ARTES Y ARTESANÍAS</td>
+			<td>fam005</td>
+			<td>   INDUSTRIAS ALIMENTARIAS</td>
+			<td>fam014</td>
+			<td>   SERVICIOS SOCIOCULTURALES Y A LA COMUNIDAD</td>
+			<td>fam023</td>
+		</tr>
+
+		<tr>
+			<td>   COMERCIO Y MARKETING</td>
+			<td>fam006</td>
+			<td>   INDUSTRIAS EXTRACTIVAS</td>
+			<td>fam015</td>
+			<td>   TEXTIL, CONFECCIÓN Y PIEL</td>
+			<td>fam024</td>
+		</tr>
+
+		<tr>
+			<td>   EDIFICACIÓN Y OBRA CIVIL</td>
+			<td>fam007</td>
+			<td>   INFORMÁTICA Y COMUNICACIONES</td>
+			<td>fam016</td>
+			<td>   TRANSPORTE Y MANTENIMIENTO DE VEHÍCULOS</td>
+			<td>fam025</td>
+		</tr>
+
+		<tr>
+			<td>   ELECTRICIDAD Y ELECTRÓNICA</td>
+			<td>fam008</td>
+			<td>   INSTALACIÓN Y MANTENIMIENTO</td>
+			<td>fam017</td>
+			<td>   VIDRIO Y CERÁMICA</td>
+			<td>fam026</td>
+		</tr>
+
+		<tr>
+			<td>   ENERGÍA Y AGUA</td>
+			<td>fam009</td>
+			<td>   MADERA, MUEBLE Y CORCHO</td>
+			<td>fam018</td>
+			<td>   NO DISTRIBUIDO POR FAMILIA</td>
+			<td>fam027</td>
+		</tr>
+	</tbody>
+</table>
+
+<div id="explicacion">
+	<h3>Información</h3>
+	<p>M - Male</p>
+	<p>F - Female</p>
+	<p>Edad desde los &#60;18 hasta los 29 años.</p>
+	<p>Gráfica de barras inicial: la suma total de todos las familias profesionales por edad y sexo, representada también en el legend y pasando por encima de cada barra cambia el diagrama circular.</p>
+	<p>Pasando por encima de la gráfica circular, que detalla por colores las diferentes familias profesionales, podemos observar en el diagrama de barras el porcentaje de matriculaciones por edades y sexo.</p>
+</div>
+
+
+</body>
+</html>
